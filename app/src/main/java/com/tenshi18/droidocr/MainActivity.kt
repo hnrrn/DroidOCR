@@ -18,12 +18,13 @@ package com.tenshi18.droidocr
 
 import android.Manifest
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -34,28 +35,26 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.window.Dialog
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import com.tenshi18.droidocr.ui.theme.DroidOCRTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.window.Dialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import android.os.Build
-import android.util.Log
+import com.tenshi18.droidocr.ui.theme.DroidOCRTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -65,8 +64,7 @@ class MainActivity : ComponentActivity() {
     
     private val ppocrRec = PPOCRv5Rec()
     private lateinit var languageManager: LanguageManager
-    private var isModelLoaded = false
-    private var sharedImageUri: Uri? = null
+    private var isModelLoaded by mutableStateOf(false)
     
     override fun attachBaseContext(newBase: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -91,8 +89,6 @@ class MainActivity : ComponentActivity() {
         }
         
         loadModel()
-
-        handleSharedIntent(intent)
         
         setContent {
             DroidOCRTheme {
@@ -104,8 +100,6 @@ class MainActivity : ComponentActivity() {
                         ppocrRec = ppocrRec,
                         isModelLoaded = isModelLoaded,
                         languageManager = languageManager,
-                        sharedImageUri = sharedImageUri,
-                        onSharedImageProcessed = { sharedImageUri = null },
                         onLanguageChanged = { language ->
                             switchLanguage(language)
                         }
@@ -132,23 +126,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        handleSharedIntent(intent)
-    }
-    
-    private fun handleSharedIntent(intent: Intent?) {
-        if (intent?.action == Intent.ACTION_SEND && intent.type?.startsWith("image/") == true) {
-            val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
-            } else {
-                @Suppress("DEPRECATION")
-                intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
-            }
-            sharedImageUri = uri
-        }
-    }
     
     private fun switchLanguage(language: OcrLanguage) {
         languageManager.setLanguage(language)
@@ -318,13 +295,11 @@ fun OCRScreen(
     ppocrRec: PPOCRv5Rec,
     isModelLoaded: Boolean,
     languageManager: LanguageManager,
-    sharedImageUri: Uri?,
-    onSharedImageProcessed: () -> Unit,
     onLanguageChanged: (OcrLanguage) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    
+
     var selectedImageBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var recognizedText by remember { mutableStateOf("") }
     var isProcessing by remember { mutableStateOf(false) }
@@ -332,32 +307,32 @@ fun OCRScreen(
     var showFullscreenImage by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
     var currentLanguage by remember { mutableStateOf(languageManager.getCurrentLanguage()) }
-    
-    // Функция для обработки изображения из Uri
+
+    // Function to process image from Uri
     fun processImageFromUri(uri: Uri) {
         scope.launch {
             try {
                 val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
                 val bitmap = BitmapFactory.decodeStream(inputStream)
                 inputStream?.close()
-                
+
                 if (bitmap != null) {
                     selectedImageBitmap = bitmap
-                    
+
                     if (isModelLoaded) {
                         isProcessing = true
                         val regions = withContext(Dispatchers.Default) {
                             ppocrRec.detectAndRecognizeWithBoxes(bitmap)
                         }
-                        
+
                         val sortedRegions = regions.sortedWith(compareBy(
                             { it.corners.minOf { p -> p.y } },
                             { it.corners.minOf { p -> p.x } }
                         )).toTypedArray()
-                        
+
                         textRegions = sortedRegions
                         recognizedText = sortedRegions.joinToString("\n") { it.text }
-                        
+
                         isProcessing = false
                     }
                 }
@@ -368,29 +343,17 @@ fun OCRScreen(
             }
         }
     }
-    
-    // Обработка shared image при первом появлении
-    LaunchedEffect(sharedImageUri) {
-        sharedImageUri?.let { uri ->
-            processImageFromUri(uri)
-            onSharedImageProcessed()
-        }
-    }
-    
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let { processImageFromUri(it) }
     }
-    
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .windowInsetsPadding(WindowInsets.statusBars)
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+
+    val scrollState = rememberScrollState()
+
+    @Composable
+    fun ColumnContent() {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -402,7 +365,7 @@ fun OCRScreen(
                 text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.headlineMedium
             )
-            
+
             Button(
                 onClick = { showLanguageDialog = true }
             ) {
@@ -412,7 +375,7 @@ fun OCRScreen(
                 )
             }
         }
-        
+
         if (showLanguageDialog) {
             LanguageSelectionDialog(
                 currentLanguage = currentLanguage,
@@ -426,7 +389,7 @@ fun OCRScreen(
                 onDismiss = { showLanguageDialog = false }
             )
         }
-        
+
         if (selectedImageBitmap == null) {
             Card(
                 modifier = Modifier
@@ -441,15 +404,15 @@ fun OCRScreen(
                             else stringResource(R.string.model_not_loaded)
                         ),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (isModelLoaded) 
-                            MaterialTheme.colorScheme.primary 
-                        else 
+                        color = if (isModelLoaded)
+                            MaterialTheme.colorScheme.primary
+                        else
                             MaterialTheme.colorScheme.error
                     )
                 }
             }
         }
-        
+
         Button(
             onClick = { imagePickerLauncher.launch("image/*") },
             enabled = isModelLoaded && !isProcessing,
@@ -459,7 +422,7 @@ fun OCRScreen(
         ) {
             Text(stringResource(R.string.select_image))
         }
-        
+
         selectedImageBitmap?.let { bitmap ->
             Card(
                 modifier = Modifier
@@ -478,14 +441,14 @@ fun OCRScreen(
                 )
             }
         }
-        
+
         if (isProcessing) {
             CircularProgressIndicator(
                 modifier = Modifier.padding(16.dp)
             )
             Text(stringResource(R.string.processing))
         }
-        
+
         if (recognizedText.isNotEmpty()) {
             Card(
                 modifier = Modifier
@@ -498,7 +461,7 @@ fun OCRScreen(
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
-                    SelectionContainer { 
+                    SelectionContainer {
                         Text(
                             text = recognizedText,
                             style = MaterialTheme.typography.bodyLarge
@@ -507,7 +470,7 @@ fun OCRScreen(
                 }
             }
         }
-        
+
         if (selectedImageBitmap == null && recognizedText.isEmpty()) {
             Card(
                 modifier = Modifier.fillMaxWidth()
@@ -526,7 +489,18 @@ fun OCRScreen(
             }
         }
     }
-    
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .padding(16.dp)
+            .verticalScroll(scrollState),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        ColumnContent()
+    }
+
     if (showFullscreenImage && selectedImageBitmap != null) {
         FullscreenImageDialog(
             bitmap = selectedImageBitmap!!,

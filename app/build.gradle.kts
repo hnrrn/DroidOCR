@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    id("org.jetbrains.kotlin.plugin.compose") version "2.2.0"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.2.10"
 }
 
 android {
@@ -74,8 +74,7 @@ kotlin {
 
 configurations.all {
     resolutionStrategy {
-        force("com.android.tools.lint:lint-gradle:31.13.0")
-        force("com.android.tools.build:aapt2:8.13.0-13719691:linux")
+        force("com.android.tools.lint:lint-gradle:32.0.0")
     }
 }
 
@@ -94,4 +93,7 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.junit.ext)
     androidTestImplementation(libs.espresso.core)
+
+    // Material Icons Extended - uses Compose Material version
+    implementation("androidx.compose.material:material-icons-extended:1.5.4")
 }
