@@ -35,11 +35,14 @@ jobs:
         # 3. 处理 OpenCV
         echo "Processing OpenCV..."
         wget -q https://github.com/nihui/opencv-mobile/releases/download/v34/opencv-mobile-4.12.0-android.zip
-        unzip -q opencv-mobile-4.12.0-android.zip
+        mkdir -p app/src/main/jniLibs/OpenCV
+        unzip -d opencv-mobile-4.12.0-android.zip app/src/main/jniLibs/OpenCV
+        cp -r  app/src/main/jniLibs/OpenCV/*  app/src/main/jniLibs/
 
         # 4. 调试：在日志中打印路径结构，确认 libSPIRV.a 到底在哪里
         echo "Checking path for libSPIRV.a:"
         find app/src/main/jniLibs -name "libSPIRV.a"
+        find app/src/main/jniLibs -name "ibkleidicv.a"
 
         # 5. 清理压宿包
         rm *.zip
