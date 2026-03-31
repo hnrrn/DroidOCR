@@ -26,9 +26,8 @@ jobs:
         distribution: 'temurin'
         cache: gradle
    
-    - name: 构建 (禁用 GPU 依赖)
-      run: gradlew assembleDebug \
-          -Pandroid.externalNativeBuild.cmake.arguments="-DNCNN_VULKAN=OFF -DNCNN_BUILD_BENCHMARK=OFF"
+    - name: 构建
+      run: gradlew assembleDebug
       
     - name: 上传构建产物 (APK)
       uses: actions/upload-artifact@v4
