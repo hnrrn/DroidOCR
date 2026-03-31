@@ -37,7 +37,7 @@ jobs:
         echo "Downloading OpenCV-mobile..."
         wget -q https://github.com/nihui/opencv-mobile/releases/download/v34/opencv-mobile-4.12.0-android.zip
         unzip -qo opencv-mobile-4.12.0-android.zip
-o
+        
     - name: 授予 Gradle 执行权限并生成 Wrapper
       run: |
         if [ ! -f gradlew ]; then
