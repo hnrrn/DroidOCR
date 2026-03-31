@@ -45,6 +45,7 @@ jobs:
         # 4. 调试：在日志中打印路径结构，确认 libSPIRV.a 到底在哪里
         echo "Checking path for libSPIRV.a:"
         find app/src/main/jniLibs -name "libSPIRV.a"
+        echo "Checking path for ibkleidicv.a"
         find app/src/main/jniLibs -name "ibkleidicv.a"
 
         # 5. 清理压宿包
