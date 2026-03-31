@@ -37,9 +37,6 @@ jobs:
         echo "Downloading OpenCV-mobile..."
         wget -q https://github.com/nihui/opencv-mobile/releases/download/v34/opencv-mobile-4.12.0-android.zip
         unzip -q opencv-mobile-4.12.0-android.zip
-        # 建议重命名为 opencv 以便 CMakeLists.txt 引用
-        mv opencv-mobile-4.12.0-android opencv
-        rm opencv-mobile-4.12.0-android.zip
 
     - name: 授予 Gradle 执行权限并生成 Wrapper
       run: |
