@@ -35,7 +35,6 @@ jobs:
         # 3. 处理 OpenCV
         echo "Processing OpenCV..."
         wget -q https://github.com/nihui/opencv-mobile/releases/download/v34/opencv-mobile-4.12.0-android.zip
-        mkdir -p app/src/main/jniLibs/OpenCV
         unzip -d opencv-mobile-4.12.0-android.zip app/src/main/jniLibs/OpenCV
         cp -r  app/src/main/jniLibs/OpenCV/*  app/src/main/jniLibs/
 
