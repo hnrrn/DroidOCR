@@ -25,8 +25,6 @@ jobs:
         java-version: '17' # 建议使用 JDK 17，兼容大多数现代 Android 项目
         distribution: 'temurin'
         cache: gradle
-    - name: 安装 NDK
-      run: echo "y" | sudo ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358"
    
     - name: 使用 Gradle 构建 APK
       run: gradle assembleDebug
