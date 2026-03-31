@@ -35,7 +35,7 @@ jobs:
         # 3. 处理 OpenCV
         echo "Processing OpenCV..."
         wget -q https://github.com/nihui/opencv-mobile/releases/download/v34/opencv-mobile-4.12.0-android.zip
-        unzip -qo opencv-mobile-4.12.0-android.zip
+        unzip -q opencv-mobile-4.12.0-android.zip
 
         # 4. 调试：在日志中打印路径结构，确认 libSPIRV.a 到底在哪里
         echo "Checking path for libSPIRV.a:"
