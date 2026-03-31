@@ -19,24 +19,31 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
         cache: gradle
-
-    - name: 下载并准备预编译库 (ncnn & OpenCV)
+    - name: 下载并准备预编译库 (修复路径逻辑)
       run: |
-        # 1. 创建并进入目标目录
+        # 1. 创建目标根目录
         mkdir -p app/src/main/jniLibs
-        cd app/src/main/jniLibs
         
-        # 2. 处理 ncnn (20250916 版本)
-        echo "Downloading ncnn..."
+        # 2. 处理 ncnn
+        echo "Processing ncnn..."
         wget -q https://github.com/Tencent/ncnn/releases/download/20250916/ncnn-20250916-android-vulkan.zip
         unzip -q ncnn-20250916-android-vulkan.zip
-        mv ncnn-20250916-android-vulkan ncnn
-        rm ncnn-20250916-android-vulkan.zip
+        # 强制将解压目录下的内容移动到 jniLibs/ncnn，不留多余层级
+        mkdir -p app/src/main/jniLibs/ncnn
+        cp -r ncnn-20250916-android-vulkan/* app/src/main/jniLibs/ncnn/
         
-        # 3. 处理 OpenCV-mobile (4.12.0 版本)
-        echo "Downloading OpenCV-mobile..."
+        # 3. 处理 OpenCV
+        echo "Processing OpenCV..."
         wget -q https://github.com/nihui/opencv-mobile/releases/download/v34/opencv-mobile-4.12.0-android.zip
         unzip -qo opencv-mobile-4.12.0-android.zip
+
+        # 4. 调试：在日志中打印路径结构，确认 libSPIRV.a 到底在哪里
+        echo "Checking path for libSPIRV.a:"
+        find app/src/main/jniLibs -name "libSPIRV.a"
+
+        # 5. 清理压宿包
+        rm *.zip
+
         
     - name: 授予 Gradle 执行权限并生成 Wrapper
       run: |
